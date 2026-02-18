@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TYPE//RACER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --green: #00ff41;
+    --green-dim: #00a828;
+    --green-dark: #003a0e;
+    --amber: #ffb000;
+    --red: #ff3131;
+    --bg: #030d06;
+    --bg2: #070f08;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* CRT scan lines */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  /* Ambient grid */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+  }
+
+  .container {
+    width: min(700px, 95vw);
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-dim), 0 0 60px rgba(0,255,65,0.2);
+    animation: flicker 6s infinite;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 0.4em;
+    color: var(--green-dim);
+    margin-top: 4px;
+  }
+
+  @keyframes flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.7; }
+    97% { opacity: 1; }
+    98% { opacity: 0.4; }
+    99% { opacity: 1; }
+  }
+
+  /* Stats bar */
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 8px 16px;
+    border: 1px solid var(--green-dark);
+    background: rgba(0,255,65,0.03);
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--green-dim);
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green);
+  }
+
+  /* Progress track */
+  .track {
+    height: 6px;
+    background: var(--green-dark);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .track-fill {
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  .track-car {
+    position: absolute;
+    top: -6px;
+    font-size: 16px;
+    transition: left 0.3s ease;
+    filter: drop-shadow(0 0 4px var(--green));
+  }
+
+  /* Word display */
+  .word-display {
+    background: rgba(0,10,2,0.8);
+    border: 1px solid var(--green-dim);
+    padding: 24px;
+    margin-bottom: 16px;
+    min-height: 120px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-content: flex-start;
+    box-shadow: inset 0 0 20px rgba(0,255,65,0.05), 0 0 20px rgba(0,255,65,0.05);
+    position: relative;
+  }
+
+  .word-display::before {
+    content: 'STREAM //';
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--green-dim);
+    background: var(--bg);
+    padding: 0 6px;
+  }
+
+  .word {
+    font-size: 1.3rem;
+    letter-spacing: 0.05em;
+    padding: 2px 4px;
+    transition: color 0.1s;
+  }
+
+  .word.done { color: var(--green-dark); }
+  .word.current { color: var(--green); }
+  .word.pending { color: #1a5c2a; }
+
+  .word.current .char { display: inline-block; }
+  .word.current .char.correct { color: var(--green); text-shadow: 0 0 6px var(--green); }
+  .word.current .char.wrong { color: var(--red); text-shadow: 0 0 6px var(--red); background: rgba(255,49,49,0.1); }
+  .word.current .char.pending { color: #2a7a3a; }
+
+  /* Cursor blink on current char */
+  .word.current .char.cursor::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--green);
+    vertical-align: middle;
+    margin-left: 1px;
+    animation: blink 0.8s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Input */
+  .input-zone {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .input-zone::before {
+    content: '>';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--green);
+    font-size: 1.2rem;
+    z-index: 1;
+  }
+
+  #typeInput {
+    width: 100%;
+    background: rgba(0,255,65,0.05);
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    padding: 12px 14px 12px 30px;
+    outline: none;
+    caret-color: var(--green);
+    letter-spacing: 0.05em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  #typeInput:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 15px rgba(0,255,65,0.2), inset 0 0 10px rgba(0,255,65,0.05);
+  }
+
+  #typeInput.error {
+    border-color: var(--red);
+    box-shadow: 0 0 15px rgba(255,49,49,0.3);
+  }
+
+  /* Timer bar */
+  .timer-bar {
+    height: 3px;
+    background: var(--green-dark);
+    margin-bottom: 20px;
+  }
+
+  .timer-fill {
+    height: 100%;
+    background: var(--green);
+    width: 100%;
+    transition: width 1s linear, background 0.5s;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  .timer-fill.warning {
+    background: var(--amber);
+    box-shadow: 0 0 8px var(--amber);
+  }
+
+  .timer-fill.danger {
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+    animation: pulse-red 0.5s ease infinite alternate;
+  }
+
+  @keyframes pulse-red {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn:hover {
+    background: rgba(0,255,65,0.1);
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 10px rgba(0,255,65,0.2);
+  }
+
+  .btn.primary {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 10px rgba(0,255,65,0.1);
+  }
+
+  /* Difficulty selector */
+  .difficulty {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .diff-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid var(--green-dark);
+    color: var(--green-dark);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .diff-btn.active {
+    border-color: var(--green-dim);
+    color: var(--green-dim);
+  }
+
+  /* Screen overlays */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    background: rgba(3,13,6,0.92);
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .overlay.hidden { display: none; }
+
+  .overlay-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 20px var(--green), 0 0 60px var(--green-dim);
+    animation: glitch 3s infinite;
+  }
+
+  .overlay-title.fail { color: var(--red); text-shadow: 0 0 20px var(--red); animation: none; }
+
+  @keyframes glitch {
+    0%, 90%, 100% { transform: none; text-shadow: 0 0 20px var(--green), 0 0 60px var(--green-dim); }
+    91% { transform: translateX(-3px); text-shadow: -3px 0 var(--red), 3px 0 #00f; }
+    92% { transform: translateX(3px); text-shadow: 3px 0 var(--red), -3px 0 #00f; }
+    93% { transform: none; }
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    text-align: center;
+    padding: 20px;
+    border: 1px solid var(--green-dark);
+    background: rgba(0,255,65,0.02);
+  }
+
+  .result-label { font-size: 0.65rem; letter-spacing: 0.3em; color: var(--green-dim); margin-bottom: 4px; }
+  .result-value { font-family: 'Orbitron', monospace; font-size: 1.8rem; font-weight: 700; color: var(--green); text-shadow: 0 0 10px var(--green); }
+
+  .log {
+    font-size: 0.7rem;
+    color: var(--green-dim);
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+  }
+
+  /* Shake animation on error */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .shake { animation: shake 0.2s ease; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- Start Screen -->
+<div class="overlay" id="startScreen">
+  <div class="overlay-title">TYPE//RACER</div>
+  <div class="log">> INITIALISATION DU PROTOCOLE DE FRAPPE...</div>
+  <div style="text-align:center; color: var(--green-dim); font-size:0.8rem; letter-spacing:0.15em; line-height:1.8;">
+    Tapez les mots aussi vite que possible.<br>
+    Espace pour valider. Erreurs pénalisées.
+  </div>
+  <div class="difficulty">
+    <button class="diff-btn active" data-diff="easy">FACILE</button>
+    <button class="diff-btn" data-diff="medium">NORMAL</button>
+    <button class="diff-btn" data-diff="hard">EXPERT</button>
+  </div>
+  <button class="btn primary" id="startBtn">[ DÉMARRER ]</button>
+</div>
+
+<!-- End Screen -->
+<div class="overlay hidden" id="endScreen">
+  <div class="overlay-title" id="endTitle">RÉSULTATS</div>
+  <div class="result-grid">
+    <div><div class="result-label">VITESSE</div><div class="result-value" id="resWpm">0</div><div class="result-label">MPM</div></div>
+    <div><div class="result-label">PRÉCISION</div><div class="result-value" id="resAcc">0%</div></div>
+    <div><div class="result-label">SCORE</div><div class="result-value" id="resScore">0</div></div>
+  </div>
+  <div class="log" id="resLog">> ANALYSE TERMINÉE</div>
+  <div class="btn-row">
+    <button class="btn primary" id="restartBtn">[ REJOUER ]</button>
+    <button class="btn" id="menuBtn">[ MENU ]</button>
+  </div>
+</div>
+
+<!-- Game -->
+<div class="container">
+  <div class="header">
+    <div class="title">TYPE//RACER</div>
+    <div class="subtitle">TERMINAL SPEED PROTOCOL</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">VITESSE</div>
+      <div class="stat-value" id="wpmDisplay">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">TEMPS</div>
+      <div class="stat-value" id="timeDisplay">60</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">PRÉCISION</div>
+      <div class="stat-value" id="accDisplay">100%</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">SCORE</div>
+      <div class="stat-value" id="scoreDisplay">0</div>
+    </div>
+  </div>
+
+  <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+
+  <div class="track">
+    <div class="track-fill" id="trackFill"></div>
+    <div class="track-car" id="trackCar">▶</div>
+  </div>
+
+  <div class="word-display" id="wordDisplay"></div>
+
+  <div class="input-zone">
+    <input type="text" id="typeInput" placeholder="commencez à taper..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" disabled>
+  </div>
+</div>
+
+<script>
+const WORD_BANKS = {
+  easy: ['chat', 'chien', 'maison', 'voiture', 'arbre', 'soleil', 'lune', 'eau', 'feu', 'vent',
+    'livre', 'porte', 'table', 'rouge', 'bleu', 'vert', 'noir', 'blanc', 'nuit', 'jour',
+    'pain', 'lait', 'main', 'bras', 'pied', 'coeur', 'fleur', 'pomme', 'pain', 'mer'],
+  medium: ['vitesse', 'clavier', 'terminal', 'machine', 'écran', 'lumière', 'silence', 'digital',
+    'données', 'réseau', 'serveur', 'mémoire', 'fichier', 'signal', 'protocole', 'binaire',
+    'logique', 'système', 'moteur', 'courant', 'circuit', 'module', 'espace', 'fusion', 'source',
+    'cible', 'rapide', 'précis', 'erreur', 'boucle', 'vecteur', 'sortie', 'entrée'],
+  hard: ['algorithme', 'architecture', 'cryptographie', 'infrastructure', 'benchmark',
+    'optimisation', 'complexité', 'synchronisation', 'compilation', 'débogage',
+    'abstraction', 'récursivité', 'parallélisme', 'authentification', 'visualisation',
+    'décompression', 'interopérabilité', 'virtualisation', 'configuration', 'implémentation',
+    'transmission', 'déchiffrement', 'transformation', 'environnement', 'organisation']
+};
+
+const DURATIONS = { easy: 60, medium: 60, hard: 60 };
+
+let difficulty = 'easy';
+let words = [];
+let currentWordIndex = 0;
+let currentCharIndex = 0;
+let totalTyped = 0;
+let totalErrors = 0;
+let score = 0;
+let timeLeft = 60;
+let timerInterval = null;
+let startTime = null;
+let gameActive = false;
+
+const wordDisplay = document.getElementById('wordDisplay');
+const typeInput = document.getElementById('typeInput');
+const wpmDisplay = document.getElementById('wpmDisplay');
+const timeDisplay = document.getElementById('timeDisplay');
+const accDisplay = document.getElementById('accDisplay');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const timerFill = document.getElementById('timerFill');
+const trackFill = document.getElementById('trackFill');
+const trackCar = document.getElementById('trackCar');
+
+// Difficulty buttons
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    difficulty = btn.dataset.diff;
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', () => { hideEnd(); startGame(); });
+document.getElementById('menuBtn').addEventListener('click', () => { hideEnd(); showStart(); });
+
+function showStart() { document.getElementById('startScreen').classList.remove('hidden'); }
+function hideStart() { document.getElementById('startScreen').classList.add('hidden'); }
+function showEnd() { document.getElementById('endScreen').classList.remove('hidden'); }
+function hideEnd() { document.getElementById('endScreen').classList.add('hidden'); }
+
+function generateWords(count = 60) {
+  const bank = WORD_BANKS[difficulty];
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(bank[Math.floor(Math.random() * bank.length)]);
+  }
+  return result;
+}
+
+function renderWords() {
+  wordDisplay.innerHTML = '';
+  const visible = words.slice(Math.max(0, currentWordIndex - 2), currentWordIndex + 18);
+  const offset = Math.max(0, currentWordIndex - 2);
+
+  visible.forEach((word, i) => {
+    const idx = i + offset;
+    const span = document.createElement('span');
+    span.className = 'word';
+    
+    if (idx < currentWordIndex) {
+      span.classList.add('done');
+      span.textContent = word;
+    } else if (idx === currentWordIndex) {
+      span.classList.add('current');
+      const typed = typeInput.value;
+      word.split('').forEach((ch, ci) => {
+        const c = document.createElement('span');
+        c.className = 'char';
+        if (ci < typed.length) {
+          c.classList.add(typed[ci] === ch ? 'correct' : 'wrong');
+        } else if (ci === typed.length) {
+          c.classList.add('pending', 'cursor');
+        } else {
+          c.classList.add('pending');
+        }
+        c.textContent = ch;
+        span.appendChild(c);
+      });
+    } else {
+      span.classList.add('pending');
+      span.textContent = word;
+    }
+    wordDisplay.appendChild(span);
+  });
+}
+
+function startGame() {
+  hideStart();
+  words = generateWords(80);
+  currentWordIndex = 0;
+  currentCharIndex = 0;
+  totalTyped = 0;
+  totalErrors = 0;
+  score = 0;
+  timeLeft = DURATIONS[difficulty];
+  gameActive = true;
+
+  typeInput.value = '';
+  typeInput.disabled = false;
+  typeInput.focus();
+  typeInput.classList.remove('error');
+
+  timerFill.style.width = '100%';
+  timerFill.className = 'timer-fill';
+  trackFill.style.width = '0%';
+  trackCar.style.left = '0%';
+
+  updateStats();
+  renderWords();
+
+  clearInterval(timerInterval);
+  startTime = Date.now();
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timeDisplay.textContent = timeLeft;
+
+    const pct = (timeLeft / DURATIONS[difficulty]) * 100;
+    timerFill.style.width = pct + '%';
+    if (pct < 25) timerFill.className = 'timer-fill danger';
+    else if (pct < 50) timerFill.className = 'timer-fill warning';
+
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  gameActive = false;
+  typeInput.disabled = true;
+
+  const elapsed = (Date.now() - startTime) / 60000;
+  const wpm = Math.round(currentWordIndex / Math.max(elapsed, 0.01));
+  const acc = totalTyped > 0 ? Math.round(((totalTyped - totalErrors) / totalTyped) * 100) : 100;
+  const finalScore = Math.round(wpm * (acc / 100) * 10);
+
+  document.getElementById('resWpm').textContent = wpm;
+  document.getElementById('resAcc').textContent = acc + '%';
+  document.getElementById('resScore').textContent = finalScore;
+
+  const endTitle = document.getElementById('endTitle');
+  const log = document.getElementById('resLog');
+  if (acc >= 95 && wpm >= 40) {
+    endTitle.textContent = 'EXCELLENT';
+    endTitle.className = 'overlay-title';
+    log.textContent = '> PERFORMANCE SUPÉRIEURE DÉTECTÉE. ACCÈS NIVEAU 2 DÉBLOQUÉ.';
+  } else if (acc < 70) {
+    endTitle.textContent = 'ERREURS';
+    endTitle.className = 'overlay-title fail';
+    log.textContent = '> TROP D\'ERREURS. RECALIBRATION NÉCESSAIRE.';
+  } else {
+    endTitle.textContent = 'RÉSULTATS';
+    endTitle.className = 'overlay-title';
+    log.textContent = `> SÉQUENCE TERMINÉE. ${currentWordIndex} MOTS TRAITÉS.`;
+  }
+
+  showEnd();
+}
+
+function updateStats() {
+  if (!startTime) return;
+  const elapsed = (Date.now() - startTime) / 60000;
+  const wpm = elapsed > 0.05 ? Math.round(currentWordIndex / elapsed) : 0;
+  const acc = totalTyped > 0 ? Math.round(((totalTyped - totalErrors) / totalTyped) * 100) : 100;
+  
+  wpmDisplay.textContent = wpm;
+  accDisplay.textContent = acc + '%';
+  scoreDisplay.textContent = score;
+
+  const progress = Math.min((currentWordIndex / 40) * 100, 100);
+  trackFill.style.width = progress + '%';
+  trackCar.style.left = Math.max(0, progress - 2) + '%';
+}
+
+typeInput.addEventListener('input', () => {
+  if (!gameActive) return;
+  if (!startTime) startTime = Date.now();
+
+  const val = typeInput.value;
+  const currentWord = words[currentWordIndex];
+
+  // Check for space = word submission
+  if (val.endsWith(' ')) {
+    const typed = val.trim();
+    totalTyped += currentWord.length;
+    
+    if (typed === currentWord) {
+      score += Math.round(currentWord.length * (difficulty === 'hard' ? 3 : difficulty === 'medium' ? 2 : 1));
+      typeInput.classList.remove('error');
+    } else {
+      totalErrors += Math.abs(typed.length - currentWord.length) + 1;
+      typeInput.classList.add('error');
+      typeInput.classList.remove('error');
+    }
+
+    currentWordIndex++;
+    typeInput.value = '';
+    typeInput.classList.remove('error');
+
+    if (currentWordIndex >= words.length) endGame();
+    renderWords();
+    updateStats();
+    return;
+  }
+
+  // Live feedback
+  const hasError = [...val].some((ch, i) => i < currentWord.length && ch !== currentWord[i]);
+  if (hasError) {
+    typeInput.classList.add('error');
+  } else {
+    typeInput.classList.remove('error');
+  }
+
+  renderWords();
+  updateStats();
+});
+
+typeInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Backspace' && typeInput.value === '') {
+    e.preventDefault();
+  }
+});
+
+// Start with start screen visible
+showStart();
+</script>
+</body>
+</html>
