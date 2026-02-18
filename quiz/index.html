@@ -227,6 +227,52 @@
   .btn-start.ready { opacity: 1; pointer-events: all; }
   .btn-start.ready:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,162,39,0.3); }
 
+  /* ── BEST SCORE sur les cartes de niveau ── */
+  .diff-card .diff-best {
+    margin-top: 8px;
+    font-size: 11px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    color: var(--c);
+    opacity: 0.9;
+    min-height: 14px;
+  }
+
+  /* ── BEST SCORE sur l'écran de résultats ── */
+  .best-score-block {
+    margin: 0 auto 24px;
+    padding: 14px 24px;
+    border-radius: 4px;
+    border: 1px solid #3a2e1a;
+    background: rgba(255,255,255,0.03);
+    display: inline-block;
+    min-width: 220px;
+  }
+  .best-score-block .bs-label {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 4px;
+    font-size: 11px;
+    color: var(--silver);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .best-score-block .bs-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    color: var(--gold);
+  }
+  .best-score-block .bs-value span { font-size: 1.1rem; color: var(--silver); }
+  .best-score-block .bs-new {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #2ecc71;
+    margin-left: 8px;
+    animation: pulse 1s ease infinite alternate;
+  }
+  @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
   /* ── RESULTS ── */
   .results { text-align: center; animation: fadeUp 0.6s ease both; }
   .results .trophy { font-size: 64px; display: block; margin-bottom: 16px; }
@@ -276,18 +322,21 @@
             <span class="diff-name">Débutant</span>
             <span class="diff-desc">Grands classiques & films grand public</span>
             <span class="diff-count">10 QUESTIONS</span>
+            <span class="diff-best" id="best-debutant"></span>
           </div>
           <div class="diff-card cinephile" onclick="selectDifficulty('cinephile', this)">
             <span class="diff-icon">🎬</span>
             <span class="diff-name">Cinéphile</span>
             <span class="diff-desc">Culture ciné solide requise</span>
             <span class="diff-count">15 QUESTIONS</span>
+            <span class="diff-best" id="best-cinephile"></span>
           </div>
           <div class="diff-card expert"    onclick="selectDifficulty('expert', this)">
             <span class="diff-icon">🏆</span>
             <span class="diff-name">Expert</span>
             <span class="diff-desc">Réservé aux vrais passionnés</span>
             <span class="diff-count">20 QUESTIONS</span>
+            <span class="diff-best" id="best-expert"></span>
           </div>
         </div>
         <button class="btn-start" id="btnStart" onclick="startQuiz()">LANCER LE QUIZ</button>
@@ -317,6 +366,11 @@
       <h2 id="resultTitle"></h2>
       <span class="final-score" id="finalScore"></span>
       <p class="verdict" id="verdict"></p>
+      <div class="best-score-block">
+        <span class="bs-label">MEILLEUR SCORE — <span id="bsLevel"></span></span>
+        <span class="bs-value" id="bsValue">—</span>
+        <span class="bs-new" id="bsNew" style="display:none;">★ NOUVEAU RECORD</span>
+      </div>
       <p class="played-level" id="playedLevel"></p>
       <button class="btn-restart" onclick="restartQuiz()">CHANGER DE NIVEAU</button>
     </div>
@@ -368,6 +422,24 @@ const LEVELS = {
 let selectedDiff = null, quizQuestions = [], current = 0, score = 0, answered = false;
 const letters = ['A','B','C','D'];
 
+// ══════════════════════════════════════════════
+//  MEILLEUR SCORE (localStorage)
+// ══════════════════════════════════════════════
+function getBest(level) {
+  const raw = localStorage.getItem(`cinequiz_best_${level}`);
+  return raw !== null ? parseInt(raw, 10) : null;
+}
+function setBest(level, val) {
+  localStorage.setItem(`cinequiz_best_${level}`, val);
+}
+function updateBestOnCards() {
+  Object.keys(LEVELS).forEach(key => {
+    const best = getBest(key);
+    const el = document.getElementById(`best-${key}`);
+    if (el) el.textContent = best !== null ? `RECORD : ${best} / ${LEVELS[key].count}` : '';
+  });
+}
+
 // Perforations pellicule
 function generateHoles(el) {
   const n = Math.ceil(window.innerHeight / 28);
@@ -375,6 +447,7 @@ function generateHoles(el) {
 }
 generateHoles(document.getElementById('filmLeft'));
 generateHoles(document.getElementById('filmRight'));
+updateBestOnCards();
 
 // ── Sélection niveau ──
 function selectDifficulty(key, el) {
@@ -492,6 +565,16 @@ function showResults() {
   const lvlEl = document.getElementById('playedLevel');
   lvlEl.textContent = `Niveau joué : ${cfg.label}`;
   lvlEl.className = `played-level ${selectedDiff}`;
+
+  // ── Meilleur score ──
+  const prev = getBest(selectedDiff);
+  const isNew = prev === null || score > prev;
+  if (isNew) setBest(selectedDiff, score);
+
+  document.getElementById('bsLevel').textContent = cfg.label;
+  const best = getBest(selectedDiff);
+  document.getElementById('bsValue').innerHTML = `${best}<span> / ${cfg.count}</span>`;
+  document.getElementById('bsNew').style.display = isNew ? 'inline' : 'none';
 }
 
 // ── Rejouer ──
@@ -504,6 +587,7 @@ function restartQuiz() {
   document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('headerSubtitle').textContent = 'Cinéma · QCM';
   document.documentElement.style.setProperty('--accent', '#c9a227');
+  updateBestOnCards();
 }
 </script>
 </body>
