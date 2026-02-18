@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CinéQuiz — Le Quiz du 7ème Art</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f5f0e8;
+    --dark: #1a1208;
+    --gold: #c9a227;
+    --red: #c0392b;
+    --silver: #a0998a;
+    --accent: #c9a227;
+  }
+
+  body {
+    background-color: var(--dark);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  .filmstrip {
+    position: fixed;
+    top: 0; bottom: 0;
+    width: 36px;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+  }
+  .filmstrip.left { left: 0; }
+  .filmstrip.right { right: 0; }
+  .filmstrip-hole {
+    width: 20px; height: 16px;
+    background: var(--dark);
+    border-radius: 3px;
+    margin: 6px auto;
+    border: 1px solid #333;
+    flex-shrink: 0;
+  }
+
+  .container {
+    max-width: 680px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeDown 0.8s ease both;
+  }
+  .header .label {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 6px;
+    color: var(--gold);
+    font-size: 13px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    color: var(--cream);
+    line-height: 1;
+  }
+  .header h1 em { color: var(--gold); font-style: italic; }
+  .header .subtitle {
+    margin-top: 10px;
+    color: var(--silver);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 1px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: linear-gradient(145deg, #231b0e, #1a1208);
+    border: 1px solid #3a2e1a;
+    border-radius: 4px;
+    padding: 40px;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,162,39,0.15);
+    animation: fadeUp 0.6s ease both;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    transition: background 0.5s;
+  }
+
+  /* ── DIFFICULTY BADGE (in-quiz) ── */
+  .difficulty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    border: 1px solid;
+  }
+  .difficulty-badge.debutant  { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+  .difficulty-badge.cinephile { color: var(--gold); border-color: var(--gold); background: rgba(201,162,39,0.08); }
+  .difficulty-badge.expert    { color: #ef5350; border-color: #ef5350; background: rgba(239,83,80,0.08); }
+
+  /* ── PROGRESS ── */
+  .progress-bar-wrap { margin-bottom: 28px; }
+  .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .progress-label { font-family: 'Bebas Neue', sans-serif; letter-spacing: 3px; font-size: 13px; color: var(--silver); }
+  .progress-score { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--gold); letter-spacing: 2px; }
+  .progress-track { height: 3px; background: #2e2416; border-radius: 10px; overflow: hidden; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #e8c94a);
+    border-radius: 10px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background 0.5s;
+  }
+
+  /* ── MINUTEUR ── */
+  .timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .timer-digits {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    min-width: 36px;
+    transition: color 0.3s;
+  }
+  .timer-digits.urgent { color: #ef5350; }
+  .timer-track {
+    flex: 1;
+    height: 4px;
+    background: #2e2416;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: var(--accent);
+    transition: width 1s linear, background 0.3s;
+  }
+  .timer-fill.urgent { background: #ef5350; }
+
+  /* ── QUESTION ── */
+  .question-number { font-family: 'Playfair Display', serif; font-style: italic; color: var(--gold); font-size: 13px; margin-bottom: 12px; display: block; }
+  .question-text { font-family: 'Playfair Display', serif; font-size: clamp(1.1rem, 2.5vw, 1.35rem); line-height: 1.5; color: var(--cream); margin-bottom: 28px; min-height: 60px; }
+
+  /* ── OPTIONS ── */
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .options { grid-template-columns: 1fr; } }
+
+  .option-btn {
+    background: transparent;
+    border: 1px solid #3a2e1a;
+    border-radius: 3px;
+    color: var(--cream);
+    padding: 14px 18px;
+    text-align: left;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+  }
+  .option-btn .opt-letter { font-family: 'Bebas Neue', sans-serif; color: var(--gold); margin-right: 8px; font-size: 16px; letter-spacing: 1px; }
+  .option-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(201,162,39,0.08); transform: translateY(-1px); }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.correct { border-color: #27ae60; background: rgba(39,174,96,0.15); color: #2ecc71; }
+  .option-btn.correct .opt-letter { color: #2ecc71; }
+  .option-btn.wrong { border-color: var(--red); background: rgba(192,57,43,0.15); color: #e74c3c; }
+  .option-btn.wrong .opt-letter { color: #e74c3c; }
+
+  /* ── FEEDBACK ── */
+  .feedback { margin-top: 20px; padding: 14px 18px; border-radius: 3px; font-size: 14px; line-height: 1.5; display: none; animation: fadeUp 0.3s ease both; }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: rgba(39,174,96,0.12); border: 1px solid rgba(39,174,96,0.3); color: #2ecc71; }
+  .feedback.wrong-fb   { background: rgba(192,57,43,0.12); border: 1px solid rgba(192,57,43,0.3); color: #e74c3c; }
+  .feedback strong { font-weight: 500; }
+
+  /* ── NEXT BTN ── */
+  .btn-next {
+    margin-top: 24px; width: 100%;
+    background: var(--accent); color: var(--dark);
+    border: none; border-radius: 3px; padding: 15px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 4px;
+    cursor: pointer; transition: all 0.2s ease; display: none;
+  }
+  .btn-next.show { display: block; }
+  .btn-next:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
+  /* ── START SCREEN ── */
+  .start-screen { text-align: center; animation: fadeUp 0.6s ease both; }
+  .start-screen > p { color: var(--silver); margin-bottom: 32px; font-size: 15px; line-height: 1.7; font-family: 'Playfair Display', serif; font-style: italic; }
+
+  /* ── DIFFICULTY SELECTOR ── */
+  .diff-title { font-family: 'Bebas Neue', sans-serif; letter-spacing: 4px; font-size: 14px; color: var(--silver); margin-bottom: 16px; }
+  .diff-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
+  @media (max-width: 480px) { .diff-cards { grid-template-columns: 1fr; } }
+
+  .diff-card {
+    border: 1px solid #3a2e1a; border-radius: 4px; padding: 20px 14px;
+    cursor: pointer; transition: all 0.25s ease; text-align: center;
+    background: transparent; color: var(--cream);
+  }
+  .diff-card.debutant  { --c: #4fc3f7; }
+  .diff-card.cinephile { --c: var(--gold); }
+  .diff-card.expert    { --c: #ef5350; }
+
+  .diff-card:hover, .diff-card.selected {
+    border-color: var(--c);
+    background: color-mix(in srgb, var(--c) 8%, transparent);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--c) 20%, transparent);
+    transform: translateY(-3px);
+  }
+  .diff-card .diff-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+  .diff-card .diff-name { font-family: 'Bebas Neue', sans-serif; letter-spacing: 3px; font-size: 16px; color: var(--c); display: block; margin-bottom: 6px; }
+  .diff-card .diff-desc { font-size: 11px; color: var(--silver); line-height: 1.4; }
+  .diff-card .diff-count { margin-top: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 12px; letter-spacing: 2px; color: var(--c); opacity: 0.7; }
+
+  .btn-start {
+    background: var(--gold); color: var(--dark); border: none; border-radius: 3px;
+    padding: 16px 52px; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 5px;
+    cursor: pointer; transition: all 0.3s ease; opacity: 0.35; pointer-events: none;
+  }
+  .btn-start.ready { opacity: 1; pointer-events: all; }
+  .btn-start.ready:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,162,39,0.3); }
+
+  /* ── BEST SCORE sur les cartes de niveau ── */
+  .diff-card .diff-best {
+    margin-top: 8px;
+    font-size: 11px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    color: var(--c);
+    opacity: 0.9;
+    min-height: 14px;
+  }
+
+  /* ── BEST SCORE sur l'écran de résultats ── */
+  .best-score-block {
+    margin: 0 auto 24px;
+    padding: 14px 24px;
+    border-radius: 4px;
+    border: 1px solid #3a2e1a;
+    background: rgba(255,255,255,0.03);
+    display: inline-block;
+    min-width: 220px;
+  }
+  .best-score-block .bs-label {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 4px;
+    font-size: 11px;
+    color: var(--silver);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .best-score-block .bs-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    color: var(--gold);
+  }
+  .best-score-block .bs-value span { font-size: 1.1rem; color: var(--silver); }
+  .best-score-block .bs-new {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #2ecc71;
+    margin-left: 8px;
+    animation: pulse 1s ease infinite alternate;
+  }
+  @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+  /* ── RESULTS ── */
+  .results { text-align: center; animation: fadeUp 0.6s ease both; }
+  .results .trophy { font-size: 64px; display: block; margin-bottom: 16px; }
+  .results h2 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 8px; }
+  .results .final-score { font-family: 'Bebas Neue', sans-serif; font-size: 5rem; color: var(--gold); line-height: 1; display: block; margin: 16px 0; }
+  .results .final-score span { font-size: 2rem; color: var(--silver); }
+  .results .verdict { color: var(--silver); font-size: 16px; margin-bottom: 8px; font-style: italic; font-family: 'Playfair Display', serif; }
+  .results .played-level { font-family: 'Bebas Neue', sans-serif; letter-spacing: 3px; font-size: 13px; margin-bottom: 28px; }
+  .results .played-level.debutant  { color: #4fc3f7; }
+  .results .played-level.cinephile { color: var(--gold); }
+  .results .played-level.expert    { color: #ef5350; }
+
+  .btn-restart {
+    background: transparent; border: 1px solid var(--gold); color: var(--gold); border-radius: 3px;
+    padding: 14px 40px; font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 4px;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn-restart:hover { background: var(--gold); color: var(--dark); }
+
+  @keyframes fadeUp   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+  .question-enter { animation: fadeUp 0.4s ease both; }
+</style>
+</head>
+<body>
+
+<div class="filmstrip left"  id="filmLeft"></div>
+<div class="filmstrip right" id="filmRight"></div>
+
+<div class="container">
+  <div class="header">
+    <span class="label">★ Le Quiz du 7ème Art ★</span>
+    <h1>Ciné<em>Quiz</em></h1>
+    <p class="subtitle" id="headerSubtitle">Cinéma · QCM</p>
+  </div>
+
+  <div class="card" id="card">
+
+    <!-- ══ START ══ -->
+    <div id="startScreen">
+      <div class="start-screen">
+        <p>Êtes-vous un vrai cinéphile ?<br>Choisissez votre niveau et mettez-vous à l'épreuve !</p>
+        <p class="diff-title">CHOISISSEZ VOTRE NIVEAU</p>
+        <div class="diff-cards">
+          <div class="diff-card debutant"  onclick="selectDifficulty('debutant', this)">
+            <span class="diff-icon">🎟️</span>
+            <span class="diff-name">Débutant</span>
+            <span class="diff-desc">Grands classiques & films grand public</span>
+            <span class="diff-count">10 QUESTIONS · ⏱ 30S</span>
+            <span class="diff-best" id="best-debutant"></span>
+          </div>
+          <div class="diff-card cinephile" onclick="selectDifficulty('cinephile', this)">
+            <span class="diff-icon">🎬</span>
+            <span class="diff-name">Cinéphile</span>
+            <span class="diff-desc">Culture ciné solide requise</span>
+            <span class="diff-count">15 QUESTIONS · ⏱ 20S</span>
+            <span class="diff-best" id="best-cinephile"></span>
+          </div>
+          <div class="diff-card expert"    onclick="selectDifficulty('expert', this)">
+            <span class="diff-icon">🏆</span>
+            <span class="diff-name">Expert</span>
+            <span class="diff-desc">Réservé aux vrais passionnés</span>
+            <span class="diff-count">20 QUESTIONS · ⏱ 15S</span>
+            <span class="diff-best" id="best-expert"></span>
+          </div>
+        </div>
+        <button class="btn-start" id="btnStart" onclick="startQuiz()">LANCER LE QUIZ</button>
+      </div>
+    </div>
+
+    <!-- ══ QUIZ ══ -->
+    <div id="quizScreen" style="display:none;">
+      <div class="progress-bar-wrap">
+        <div class="progress-meta">
+          <span class="progress-label" id="progressLabel">Question 1 / 10</span>
+          <span class="progress-score" id="scoreLabel">Score : 0</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <div id="diffBadge" class="difficulty-badge"></div>
+      <div class="timer-wrap">
+        <span class="timer-digits" id="timerDigits">30</span>
+        <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+      </div>
+      <span class="question-number" id="questionNum"></span>
+      <p class="question-text" id="questionText"></p>
+      <div class="options" id="optionsGrid"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="btn-next" id="btnNext" onclick="nextQuestion()">QUESTION SUIVANTE →</button>
+    </div>
+
+    <!-- ══ RESULTS ══ -->
+    <div class="results" id="resultsScreen" style="display:none;">
+      <span class="trophy" id="trophy">🎬</span>
+      <h2 id="resultTitle"></h2>
+      <span class="final-score" id="finalScore"></span>
+      <p class="verdict" id="verdict"></p>
+      <div class="best-score-block">
+        <span class="bs-label">MEILLEUR SCORE — <span id="bsLevel"></span></span>
+        <span class="bs-value" id="bsValue">—</span>
+        <span class="bs-new" id="bsNew" style="display:none;">★ NOUVEAU RECORD</span>
+      </div>
+      <p class="played-level" id="playedLevel"></p>
+      <button class="btn-restart" onclick="restartQuiz()">CHANGER DE NIVEAU</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  QUESTIONS  (diff 1 = débutant, 2 = cinéphile, 3 = expert)
+// ══════════════════════════════════════════════
+const allQuestions = [
+  // ── DÉBUTANT ──
+  { diff:1, q:"Dans quel film Marlon Brando joue-t-il Don Vito Corleone ?", opts:["Le Parrain","Apocalypse Now","Un tramway nommé Désir","Scarface"], ans:0, info:"Le Parrain (1972) de Francis Ford Coppola. Marlon Brando a remporté l'Oscar du meilleur acteur pour ce rôle." },
+  { diff:1, q:"Dans Titanic (1997), quel est le prénom du personnage joué par Leonardo DiCaprio ?", opts:["Thomas","Jack","Leo","James"], ans:1, info:"Jack Dawson est le héros romantique du film de James Cameron, sorti en 1997." },
+  { diff:1, q:"Quel film de Christopher Nolan met en scène un architecte de rêves ?", opts:["Interstellar","The Dark Knight","Inception","Memento"], ans:2, info:"Inception (2010) explore l'idée d'implanter un concept dans l'esprit de quelqu'un via les rêves." },
+  { diff:1, q:"Quel acteur joue Iron Man dans le MCU ?", opts:["Chris Evans","Robert Downey Jr.","Chris Hemsworth","Mark Ruffalo"], ans:1, info:"Robert Downey Jr. incarne Tony Stark / Iron Man depuis le film Iron Man de 2008." },
+  { diff:1, q:"Dans Forrest Gump, quelle comparaison Forrest fait-il avec la vie ?", opts:["Un marathon","Une boîte de chocolats","Un billet de train","Un jardin de fleurs"], ans:1, info:"« La vie, c'est comme une boîte de chocolats... » — l'une des répliques les plus célèbres du cinéma." },
+  { diff:1, q:"Quel film d'animation Pixar met en scène un rat cuisinier à Paris ?", opts:["Coco","Soul","Ratatouille","Là-Haut"], ans:2, info:"Ratatouille (2007) raconte l'histoire de Rémy, un rat passionné de cuisine dans un restaurant parisien." },
+  { diff:1, q:"Quelle saga met en scène le personnage de Frodon Sacquet ?", opts:["Harry Potter","Narnia","Le Seigneur des Anneaux","Dune"], ans:2, info:"Frodon est le hobbit héros du Seigneur des Anneaux de Peter Jackson (2001-2003)." },
+  { diff:1, q:"Dans Star Wars, qui est le père de Luke Skywalker ?", opts:["Obi-Wan Kenobi","L'Empereur Palpatine","Dark Vador","Yoda"], ans:2, info:"« Luke, je suis ton père » — révélation de Dark Vador dans L'Empire contre-attaque (1980)." },
+  { diff:1, q:"Quel film de Miyazaki met en scène une jeune fille dont les parents sont transformés en cochons ?", opts:["Mon voisin Totoro","Nausicaä","Le Voyage de Chihiro","Princesse Mononoké"], ans:2, info:"Le Voyage de Chihiro (2001) a remporté l'Oscar du meilleur film d'animation en 2003." },
+  { diff:1, q:"Qui a réalisé la trilogie Matrix ?", opts:["Les Wachowski","James Cameron","Ridley Scott","Steven Spielberg"], ans:0, info:"The Wachowski Sisters ont réalisé Matrix en 1999 et ses suites." },
+
+  // ── CINÉPHILE ──
+  { diff:2, q:"Qui a réalisé 2001 : L'Odyssée de l'espace ?", opts:["Ridley Scott","George Lucas","Steven Spielberg","Stanley Kubrick"], ans:3, info:"Stanley Kubrick a réalisé ce chef-d'œuvre de la science-fiction en 1968." },
+  { diff:2, q:"Dans quel film Audrey Hepburn chante-t-elle Moon River ?", opts:["Sabrina","Vacances romaines","Diamants sur canapé","My Fair Lady"], ans:2, info:"Moon River est interprétée par Audrey Hepburn dans Diamants sur canapé (Breakfast at Tiffany's, 1961)." },
+  { diff:2, q:"Dans quel film Jodie Foster joue-t-elle une agent du FBI face à Hannibal Lecter ?", opts:["Panic Room","Le Silence des agneaux","Contact","Flightplan"], ans:1, info:"Le Silence des agneaux (1991) de Jonathan Demme. Jodie Foster y joue Clarice Starling." },
+  { diff:2, q:"Quelle actrice joue Scarlett O'Hara dans Autant en emporte le vent ?", opts:["Bette Davis","Vivien Leigh","Joan Crawford","Katharine Hepburn"], ans:1, info:"Vivien Leigh a incarné Scarlett O'Hara, rôle pour lequel elle a remporté l'Oscar de la meilleure actrice." },
+  { diff:2, q:"Quel réalisateur est derrière Pulp Fiction et Kill Bill ?", opts:["David Fincher","Martin Scorsese","Quentin Tarantino","Oliver Stone"], ans:2, info:"Quentin Tarantino est l'un des réalisateurs les plus influents du cinéma indépendant américain." },
+
+  // ── EXPERT ──
+  { diff:3, q:"Quel film a remporté le premier Oscar du meilleur film lors de la cérémonie de 1929 ?", opts:["Les Ailes","Sunrise","La Foule","Chanson de Broadway"], ans:0, info:"Wings (Les Ailes, 1927) de William A. Wellman a remporté le premier Oscar du meilleur film de l'Histoire." },
+  { diff:3, q:"Quelle nationalité a le réalisateur Alfonso Cuarón ?", opts:["Espagnole","Argentine","Mexicaine","Chilienne"], ans:2, info:"Alfonso Cuarón est mexicain. Il a réalisé Gravity, Roma et Harry Potter et le prisonnier d'Azkaban." },
+  { diff:3, q:"Dans quel film de Bergman une partie d'échecs est-elle jouée contre la Mort ?", opts:["Le Septième Sceau","Persona","Cris et Chuchotements","Fanny et Alexandre"], ans:0, info:"Le Septième Sceau (1957) d'Ingmar Bergman est un classique du cinéma suédois et de la philosophie existentielle." },
+  { diff:3, q:"Quel cinéaste américain a réalisé Nashville (1975) et Short Cuts (1993) ?", opts:["John Cassavetes","Robert Altman","Sidney Lumet","Hal Ashby"], ans:1, info:"Robert Altman est connu pour ses récits choraux à la mise en scène naturaliste et improvisée." },
+  { diff:3, q:"Dans Mulholland Drive de David Lynch, comment s'appelle la mystérieuse femme amnésique ?", opts:["Betty","Rita","Diane","Camilla"], ans:1, info:"Rita (jouée par Laura Harring) adopte ce nom d'une affiche de film après son accident de voiture." },
+];
+
+// ══════════════════════════════════════════════
+//  CONFIG PAR NIVEAU
+// ══════════════════════════════════════════════
+const LEVELS = {
+  debutant:  { label:'🎟️ DÉBUTANT',  color:'#4fc3f7', maxDiff:1, count:10, timer:30 },
+  cinephile: { label:'🎬 CINÉPHILE', color:'#c9a227', maxDiff:2, count:15, timer:20 },
+  expert:    { label:'🏆 EXPERT',    color:'#ef5350', maxDiff:3, count:20, timer:15 },
+};
+
+let selectedDiff = null, quizQuestions = [], current = 0, score = 0, answered = false;
+const letters = ['A','B','C','D'];
+
+// ══════════════════════════════════════════════
+//  MINUTEUR
+// ══════════════════════════════════════════════
+const TIMER_DURATION = 30; // valeur par défaut, écrasée au lancement
+let timerDuration = TIMER_DURATION;
+let timerInterval = null, timeLeft = TIMER_DURATION;
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = timerDuration;
+  updateTimerUI();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeExpired();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+function updateTimerUI() {
+  const digits = document.getElementById('timerDigits');
+  const fill   = document.getElementById('timerFill');
+  if (!digits || !fill) return;
+  const urgent = timeLeft <= Math.floor(timerDuration / 3);
+  digits.textContent = timeLeft;
+  digits.className = 'timer-digits' + (urgent ? ' urgent' : '');
+  fill.style.width  = `${(timeLeft / timerDuration) * 100}%`;
+  fill.className    = 'timer-fill' + (urgent ? ' urgent' : '');
+}
+
+function timeExpired() {
+  if (answered) return;
+  answered = true;
+  const q = quizQuestions[current];
+  const allBtns = document.querySelectorAll('.option-btn');
+  allBtns.forEach(b => b.disabled = true);
+  allBtns[q.ans].classList.add('correct');
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback wrong-fb show';
+  fb.innerHTML = `⏱ <strong>Temps écoulé !</strong> ${q.info}`;
+
+  const nextBtn = document.getElementById('btnNext');
+  nextBtn.className = 'btn-next show';
+  nextBtn.textContent = current === quizQuestions.length - 1 ? 'VOIR MON RÉSULTAT →' : 'QUESTION SUIVANTE →';
+}
+
+// ══════════════════════════════════════════════
+//  MEILLEUR SCORE (localStorage)
+// ══════════════════════════════════════════════
+function getBest(level) {
+  const raw = localStorage.getItem(`cinequiz_best_${level}`);
+  return raw !== null ? parseInt(raw, 10) : null;
+}
+function setBest(level, val) {
+  localStorage.setItem(`cinequiz_best_${level}`, val);
+}
+function updateBestOnCards() {
+  Object.keys(LEVELS).forEach(key => {
+    const best = getBest(key);
+    const el = document.getElementById(`best-${key}`);
+    if (el) el.textContent = best !== null ? `RECORD : ${best} / ${LEVELS[key].count}` : '';
+  });
+}
+
+// Perforations pellicule
+function generateHoles(el) {
+  const n = Math.ceil(window.innerHeight / 28);
+  for (let i = 0; i < n; i++) el.innerHTML += '<div class="filmstrip-hole"></div>';
+}
+generateHoles(document.getElementById('filmLeft'));
+generateHoles(document.getElementById('filmRight'));
+updateBestOnCards();
+
+// ── Sélection niveau ──
+function selectDifficulty(key, el) {
+  selectedDiff = key;
+  document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn = document.getElementById('btnStart');
+  btn.classList.add('ready');
+  btn.style.background = LEVELS[key].color;
+}
+
+// ── Lancer le quiz ──
+function startQuiz() {
+  if (!selectedDiff) return;
+  const cfg = LEVELS[selectedDiff];
+  quizQuestions = allQuestions.filter(q => q.diff <= cfg.maxDiff).slice(0, cfg.count);
+
+  document.documentElement.style.setProperty('--accent', cfg.color);
+
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('quizScreen').style.display = 'block';
+  document.getElementById('headerSubtitle').textContent = `${cfg.count} questions · ${cfg.label.replace(/^\S+\s/, '')}`;
+
+  const badge = document.getElementById('diffBadge');
+  badge.className = `difficulty-badge ${selectedDiff}`;
+  badge.textContent = cfg.label;
+
+  current = 0; score = 0;
+  timerDuration = cfg.timer;
+  showQuestion();
+}
+
+// ── Afficher question ──
+function showQuestion() {
+  answered = false;
+  const total = quizQuestions.length;
+  const q = quizQuestions[current];
+
+  document.getElementById('questionNum').textContent = `Question ${current + 1} sur ${total}`;
+  document.getElementById('progressLabel').textContent = `Question ${current + 1} / ${total}`;
+  document.getElementById('scoreLabel').textContent = `Score : ${score}`;
+  document.getElementById('progressFill').style.width = `${(current / total) * 100}%`;
+  document.getElementById('questionText').textContent = q.q;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').innerHTML = '';
+  document.getElementById('btnNext').className = 'btn-next';
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  grid.className = 'options question-enter';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, btn);
+    grid.appendChild(btn);
+  });
+  startTimer();
+}
+
+// ── Sélectionner réponse ──
+function selectAnswer(idx, btn) {
+  if (answered) return;
+  answered = true;
+  stopTimer();
+  const q = quizQuestions[current];
+  const allBtns = document.querySelectorAll('.option-btn');
+  allBtns.forEach(b => b.disabled = true);
+
+  const fb = document.getElementById('feedback');
+  if (idx === q.ans) {
+    score++;
+    btn.classList.add('correct');
+    fb.className = 'feedback correct-fb show';
+    fb.innerHTML = `✓ <strong>Bonne réponse !</strong> ${q.info}`;
+  } else {
+    btn.classList.add('wrong');
+    allBtns[q.ans].classList.add('correct');
+    fb.className = 'feedback wrong-fb show';
+    fb.innerHTML = `✗ <strong>Mauvaise réponse.</strong> ${q.info}`;
+  }
+
+  document.getElementById('scoreLabel').textContent = `Score : ${score}`;
+  const nextBtn = document.getElementById('btnNext');
+  nextBtn.className = 'btn-next show';
+  nextBtn.textContent = current === quizQuestions.length - 1 ? 'VOIR MON RÉSULTAT →' : 'QUESTION SUIVANTE →';
+}
+
+// ── Question suivante ──
+function nextQuestion() {
+  current++;
+  if (current >= quizQuestions.length) showResults();
+  else showQuestion();
+}
+
+// ── Résultats ──
+function showResults() {
+  stopTimer();
+  document.getElementById('quizScreen').style.display = 'none';
+  document.getElementById('resultsScreen').style.display = 'block';
+
+  const total = quizQuestions.length;
+  const pct = score / total;
+  document.getElementById('finalScore').innerHTML = `${score}<span> / ${total}</span>`;
+
+  let trophy, title, verdict;
+  if      (pct >= 0.9)  { trophy='🏆'; title='Génie du Cinéma !';   verdict='Vous êtes une véritable encyclopédie du 7ème art.'; }
+  else if (pct >= 0.7)  { trophy='🎬'; title='Grand Cinéphile !';   verdict='Vous avez une excellente culture cinématographique.'; }
+  else if (pct >= 0.5)  { trophy='🎞️'; title='Bon Spectateur !';   verdict='Vous connaissez vos classiques. Continuez à explorer !'; }
+  else if (pct >= 0.25) { trophy='🎭'; title='Apprenti Cinéphile';  verdict='Il y a encore beaucoup de films à découvrir !'; }
+  else                  { trophy='🍿'; title='Débutant Courageux';  verdict='Lancez-vous dans une grande séance de rattrapage !'; }
+
+  document.getElementById('trophy').textContent = trophy;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('progressFill').style.width = '100%';
+
+  const cfg = LEVELS[selectedDiff];
+  const lvlEl = document.getElementById('playedLevel');
+  lvlEl.textContent = `Niveau joué : ${cfg.label}`;
+  lvlEl.className = `played-level ${selectedDiff}`;
+
+  // ── Meilleur score ──
+  const prev = getBest(selectedDiff);
+  const isNew = prev === null || score > prev;
+  if (isNew) setBest(selectedDiff, score);
+
+  document.getElementById('bsLevel').textContent = cfg.label;
+  const best = getBest(selectedDiff);
+  document.getElementById('bsValue').innerHTML = `${best}<span> / ${cfg.count}</span>`;
+  document.getElementById('bsNew').style.display = isNew ? 'inline' : 'none';
+}
+
+// ── Rejouer ──
+function restartQuiz() {
+  selectedDiff = null; current = 0; score = 0;
+  document.getElementById('resultsScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'block';
+  document.getElementById('btnStart').classList.remove('ready');
+  document.getElementById('btnStart').style.background = '';
+  document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('headerSubtitle').textContent = 'Cinéma · QCM';
+  document.documentElement.style.setProperty('--accent', '#c9a227');
+  updateBestOnCards();
+}
+</script>
+</body>
+</html>
