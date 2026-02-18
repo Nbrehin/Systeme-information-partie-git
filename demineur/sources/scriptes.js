@@ -1,26 +1,38 @@
-  const size = 10;
+const size = 10;
 const mineCount = 15;
 const gridElement = document.getElementById("grid");
 
 let grid = [];
 let firstClick = true;
 let revealedSafeCells = 0;
+let gameOver = false;
 
 function init() {
     grid = [];
     gridElement.innerHTML = "";
     firstClick = true;
     revealedSafeCells = 0;
+    gameOver = false;
 
     for (let i = 0; i < size * size; i++) {
     const cell = {
         mine: false,
         revealed: false,
+        flagged: false,
         element: document.createElement("div")
     };
 
     cell.element.className = "cell";
+
+    // Clic gauche
     cell.element.addEventListener("click", () => reveal(i));
+
+    // Clic droit (drapeau)
+    cell.element.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        toggleFlag(i);
+    });
+
     gridElement.appendChild(cell.element);
     grid.push(cell);
     }
@@ -55,10 +67,27 @@ function neighbors(index) {
     return result;
 }
 
+function toggleFlag(index) {
+    const cell = grid[index];
+
+    if (cell.revealed || gameOver) return;
+
+    cell.flagged = !cell.flagged;
+
+    if (cell.flagged) {
+    cell.element.textContent = "🚩";
+    cell.element.classList.add("flag");
+    } else {
+    cell.element.textContent = "";
+    cell.element.classList.remove("flag");
+    }
+}
+
 function checkVictory() {
     if (revealedSafeCells === size * size - mineCount) {
+    gameOver = true;
     setTimeout(() => {
-        alert("Victoire !");
+        alert("Victoire ! 🎉");
         init();
     }, 50);
     }
@@ -66,7 +95,8 @@ function checkVictory() {
 
 function reveal(index) {
     const cell = grid[index];
-    if (cell.revealed) return;
+
+    if (cell.revealed || cell.flagged || gameOver) return;
 
     if (firstClick) {
     placeMines(index);
@@ -79,8 +109,11 @@ function reveal(index) {
     if (cell.mine) {
     cell.element.classList.add("mine");
     cell.element.textContent = "💣";
-    alert("Perdu !");
-    init();
+    gameOver = true;
+    setTimeout(() => {
+        alert("Perdu ! 💥");
+        init();
+    }, 50);
     return;
     }
 
