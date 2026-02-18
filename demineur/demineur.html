@@ -7,6 +7,25 @@
 </head>
 <body>
   <h1>Démineur</h1>
+
+  <div id="controls">
+    <label>Difficulté : </label>
+    <select id="difficulty">
+      <option value="easy">Facile (8x8 - 10 mines)</option>
+      <option value="medium" selected>Moyen (10x10 - 15 mines)</option>
+      <option value="hard">Difficile (15x15 - 40 mines)</option>
+      <option value="custom">Personnalisé</option>
+    </select>
+
+    <div id="customSettings" style="margin-top:10px; display:none;">
+      <input type="number" id="customSize" placeholder="Taille" min="5" max="30" />
+      <input type="number" id="customMines" placeholder="Mines" min="1" />
+    </div>
+
+    <br><br>
+    <button onclick="startGame()">Nouvelle partie</button>
+  </div>
+
   <div id="grid"></div>
 
   <script src="sources/scriptes.js"></script>
