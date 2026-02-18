@@ -3,12 +3,14 @@ const mineCount = 15;
 const gridElement = document.getElementById("grid");
 
 let grid = [];
+let firstClick = true;
 
 function init() {
     grid = [];
     gridElement.innerHTML = "";
+    firstClick = true;
 
-    // Créer cellules
+    // Créer cellules (sans placer les mines)
     for (let i = 0; i < size * size; i++) {
     const cell = {
         mine: false,
@@ -21,12 +23,15 @@ function init() {
     gridElement.appendChild(cell.element);
     grid.push(cell);
     }
+}
 
-    // Placer mines
+function placeMines(firstIndex) {
     let placed = 0;
     while (placed < mineCount) {
     const i = Math.floor(Math.random() * grid.length);
-    if (!grid[i].mine) {
+
+    // Impossible que la première case cliquée soit une mine
+    if (!grid[i].mine && i !== firstIndex) {
         grid[i].mine = true;
         placed++;
     }
@@ -54,6 +59,13 @@ function neighbors(index) {
 function reveal(index) {
     const cell = grid[index];
     if (cell.revealed) return;
+
+    // Au premier clic, on place les mines
+    if (firstClick) {
+    placeMines(index);
+    firstClick = false;
+    }
+
     cell.revealed = true;
     cell.element.classList.add("revealed");
 
