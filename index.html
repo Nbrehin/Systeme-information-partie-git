@@ -1,8 +1,296 @@
-<h1>Compilation de jeux d'une qualité extraordinaire !</h1>
-<h2>Veuillez choisir votre futur jeu préféré</h2>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade — Collection de Jeux</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap">
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-<ul>
-    <li><h3><a href="./typeRacer/typing-racer.html">TypeRacer</a></h3></li>
-    <li><h3><a href="">Démineur</a></h3></li>
-    <li><h3><a href="./quiz/index.html">Quiz Cinéma</a></h3></li>
-</ul>
+    :root {
+      --bg:      #0e0e10;
+      --bg2:     #16161a;
+      --border:  rgba(255,255,255,0.07);
+      --text:    #e8e8e8;
+      --muted:   #6b6b78;
+      --accent:  #f0f0f0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ── Subtle grain overlay ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 80px 32px 100px;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header { margin-bottom: 72px; }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      width: 100%;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3.5rem, 9vw, 6.5rem);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      line-height: 0.92;
+      background: linear-gradient(160deg, #fff 30%, #888 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h2 {
+      margin-top: 20px;
+      font-size: 0.95rem;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      max-width: 420px;
+      line-height: 1.65;
+    }
+
+    /* ── Game list ────────────────────────────────────────────── */
+    ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* ── Game card ────────────────────────────────────────────── */
+    .game-card a {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 28px 32px;
+      text-decoration: none;
+      color: var(--text);
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      transition: background 0.25s, border-color 0.25s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Hover shine sweep */
+    .game-card a::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      transition: left 0.45s ease;
+      pointer-events: none;
+    }
+    .game-card a:hover::before { left: 160%; }
+
+    .game-card a:hover {
+      background: #1c1c22;
+      border-color: rgba(255,255,255,0.14);
+      transform: translateX(4px);
+    }
+
+    /* Disabled / coming-soon cards */
+    .game-card.disabled a {
+      pointer-events: none;
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    /* ── Icon bubble ──────────────────────────────────────────── */
+    .game-icon {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: transform 0.2s;
+    }
+    .game-card a:hover .game-icon { transform: scale(1.08) rotate(-3deg); }
+
+    /* ── Card text ────────────────────────────────────────────── */
+    .game-info { flex: 1; min-width: 0; }
+
+    .game-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .game-desc {
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Status badge ─────────────────────────────────────────── */
+    .badge {
+      flex-shrink: 0;
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+    .badge.available {
+      color: #6effa0;
+      background: rgba(110,255,160,0.08);
+      border: 1px solid rgba(110,255,160,0.2);
+    }
+    .badge.soon {
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Index number & arrow ─────────────────────────────────── */
+    .game-num {
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      font-weight: 300;
+      color: rgba(255,255,255,0.15);
+      width: 22px;
+      text-align: right;
+    }
+
+    .game-arrow {
+      flex-shrink: 0;
+      font-size: 1rem;
+      color: var(--muted);
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .game-card a:hover .game-arrow { opacity: 1; transform: translateX(0); }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+
+    /* ── Staggered entrance ───────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    header                  { animation: fadeUp 0.5s ease both; }
+    li:nth-child(1) a       { animation: fadeUp 0.5s 0.10s ease both; }
+    li:nth-child(2) a       { animation: fadeUp 0.5s 0.20s ease both; }
+    li:nth-child(3) a       { animation: fadeUp 0.5s 0.30s ease both; }
+    footer                  { animation: fadeUp 0.5s 0.45s ease both; }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <header>
+      <span class="eyebrow">Collection · 3 jeux</span>
+      <h1>Compilation<br>de Jeux</h1>
+      <h2>Une sélection de jeux d'une qualité extraordinaire.<br>Choisissez votre prochain favori.</h2>
+    </header>
+
+    <ul>
+      <li>
+        <div class="game-card">
+          <a href="./typeRacer/typing-racer.html">
+            <span class="game-num">01</span>
+            <div class="game-icon">⌨️</div>
+            <div class="game-info">
+              <div class="game-title">TypeRacer</div>
+              <div class="game-desc">Tapez des citations de grands auteurs — vitesse &amp; précision</div>
+            </div>
+            <span class="badge available">Disponible</span>
+            <span class="game-arrow">→</span>
+          </a>
+        </div>
+      </li>
+
+      <li>
+        <div class="game-card disabled">
+          <a href="">
+            <span class="game-num">02</span>
+            <div class="game-icon">💣</div>
+            <div class="game-info">
+              <div class="game-title">Démineur</div>
+              <div class="game-desc">Retrouvez les mines cachées sans exploser</div>
+            </div>
+            <span class="badge soon">Bientôt</span>
+            <span class="game-arrow">→</span>
+          </a>
+        </div>
+      </li>
+
+      <li>
+        <div class="game-card">
+          <a href="./quiz/index.html">
+            <span class="game-num">03</span>
+            <div class="game-icon">🎬</div>
+            <div class="game-info">
+              <div class="game-title">Quiz Cinéma</div>
+              <div class="game-desc">Testez votre culture cinématographique</div>
+            </div>
+            <span class="badge available">Disponible</span>
+            <span class="game-arrow">→</span>
+          </a>
+        </div>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>
