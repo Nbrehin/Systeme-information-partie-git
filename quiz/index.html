@@ -143,6 +143,37 @@
     transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background 0.5s;
   }
 
+  /* ── MINUTEUR ── */
+  .timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .timer-digits {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    min-width: 36px;
+    transition: color 0.3s;
+  }
+  .timer-digits.urgent { color: #ef5350; }
+  .timer-track {
+    flex: 1;
+    height: 4px;
+    background: #2e2416;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: var(--accent);
+    transition: width 1s linear, background 0.3s;
+  }
+  .timer-fill.urgent { background: #ef5350; }
+
   /* ── QUESTION ── */
   .question-number { font-family: 'Playfair Display', serif; font-style: italic; color: var(--gold); font-size: 13px; margin-bottom: 12px; display: block; }
   .question-text { font-family: 'Playfair Display', serif; font-size: clamp(1.1rem, 2.5vw, 1.35rem); line-height: 1.5; color: var(--cream); margin-bottom: 28px; min-height: 60px; }
@@ -321,21 +352,21 @@
             <span class="diff-icon">🎟️</span>
             <span class="diff-name">Débutant</span>
             <span class="diff-desc">Grands classiques & films grand public</span>
-            <span class="diff-count">10 QUESTIONS</span>
+            <span class="diff-count">10 QUESTIONS · ⏱ 30S</span>
             <span class="diff-best" id="best-debutant"></span>
           </div>
           <div class="diff-card cinephile" onclick="selectDifficulty('cinephile', this)">
             <span class="diff-icon">🎬</span>
             <span class="diff-name">Cinéphile</span>
             <span class="diff-desc">Culture ciné solide requise</span>
-            <span class="diff-count">15 QUESTIONS</span>
+            <span class="diff-count">15 QUESTIONS · ⏱ 20S</span>
             <span class="diff-best" id="best-cinephile"></span>
           </div>
           <div class="diff-card expert"    onclick="selectDifficulty('expert', this)">
             <span class="diff-icon">🏆</span>
             <span class="diff-name">Expert</span>
             <span class="diff-desc">Réservé aux vrais passionnés</span>
-            <span class="diff-count">20 QUESTIONS</span>
+            <span class="diff-count">20 QUESTIONS · ⏱ 15S</span>
             <span class="diff-best" id="best-expert"></span>
           </div>
         </div>
@@ -353,6 +384,10 @@
         <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
       </div>
       <div id="diffBadge" class="difficulty-badge"></div>
+      <div class="timer-wrap">
+        <span class="timer-digits" id="timerDigits">30</span>
+        <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+      </div>
       <span class="question-number" id="questionNum"></span>
       <p class="question-text" id="questionText"></p>
       <div class="options" id="optionsGrid"></div>
@@ -414,13 +449,66 @@ const allQuestions = [
 //  CONFIG PAR NIVEAU
 // ══════════════════════════════════════════════
 const LEVELS = {
-  debutant:  { label:'🎟️ DÉBUTANT',  color:'#4fc3f7', maxDiff:1, count:10 },
-  cinephile: { label:'🎬 CINÉPHILE', color:'#c9a227', maxDiff:2, count:15 },
-  expert:    { label:'🏆 EXPERT',    color:'#ef5350', maxDiff:3, count:20 },
+  debutant:  { label:'🎟️ DÉBUTANT',  color:'#4fc3f7', maxDiff:1, count:10, timer:30 },
+  cinephile: { label:'🎬 CINÉPHILE', color:'#c9a227', maxDiff:2, count:15, timer:20 },
+  expert:    { label:'🏆 EXPERT',    color:'#ef5350', maxDiff:3, count:20, timer:15 },
 };
 
 let selectedDiff = null, quizQuestions = [], current = 0, score = 0, answered = false;
 const letters = ['A','B','C','D'];
+
+// ══════════════════════════════════════════════
+//  MINUTEUR
+// ══════════════════════════════════════════════
+const TIMER_DURATION = 30; // valeur par défaut, écrasée au lancement
+let timerDuration = TIMER_DURATION;
+let timerInterval = null, timeLeft = TIMER_DURATION;
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = timerDuration;
+  updateTimerUI();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeExpired();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+function updateTimerUI() {
+  const digits = document.getElementById('timerDigits');
+  const fill   = document.getElementById('timerFill');
+  if (!digits || !fill) return;
+  const urgent = timeLeft <= Math.floor(timerDuration / 3);
+  digits.textContent = timeLeft;
+  digits.className = 'timer-digits' + (urgent ? ' urgent' : '');
+  fill.style.width  = `${(timeLeft / timerDuration) * 100}%`;
+  fill.className    = 'timer-fill' + (urgent ? ' urgent' : '');
+}
+
+function timeExpired() {
+  if (answered) return;
+  answered = true;
+  const q = quizQuestions[current];
+  const allBtns = document.querySelectorAll('.option-btn');
+  allBtns.forEach(b => b.disabled = true);
+  allBtns[q.ans].classList.add('correct');
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback wrong-fb show';
+  fb.innerHTML = `⏱ <strong>Temps écoulé !</strong> ${q.info}`;
+
+  const nextBtn = document.getElementById('btnNext');
+  nextBtn.className = 'btn-next show';
+  nextBtn.textContent = current === quizQuestions.length - 1 ? 'VOIR MON RÉSULTAT →' : 'QUESTION SUIVANTE →';
+}
 
 // ══════════════════════════════════════════════
 //  MEILLEUR SCORE (localStorage)
@@ -476,6 +564,7 @@ function startQuiz() {
   badge.textContent = cfg.label;
 
   current = 0; score = 0;
+  timerDuration = cfg.timer;
   showQuestion();
 }
 
@@ -504,12 +593,14 @@ function showQuestion() {
     btn.onclick = () => selectAnswer(i, btn);
     grid.appendChild(btn);
   });
+  startTimer();
 }
 
 // ── Sélectionner réponse ──
 function selectAnswer(idx, btn) {
   if (answered) return;
   answered = true;
+  stopTimer();
   const q = quizQuestions[current];
   const allBtns = document.querySelectorAll('.option-btn');
   allBtns.forEach(b => b.disabled = true);
@@ -542,6 +633,7 @@ function nextQuestion() {
 
 // ── Résultats ──
 function showResults() {
+  stopTimer();
   document.getElementById('quizScreen').style.display = 'none';
   document.getElementById('resultsScreen').style.display = 'block';
 
