@@ -1,0 +1,460 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+/* ─── Variables ──────────────────────────────────────────────────────────── */
+:root {
+  --green:      #00ff41;
+  --green-dim:  #00a828;
+  --green-dark: #003a0e;
+  --amber:      #ffb000;
+  --red:        #ff3131;
+  --bg:         #030d06;
+}
+
+/* ─── Reset & base ───────────────────────────────────────────────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--green);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── CRT scan lines ─────────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ─── CRT vignette ───────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.7) 100%);
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* ─── Ambient grid ───────────────────────────────────────────────────────── */
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 0;
+}
+
+/* ─── Main container ─────────────────────────────────────────────────────── */
+.container {
+  width: min(700px, 95vw);
+  position: relative;
+  z-index: 10;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--green);
+  text-shadow:
+    0 0 10px var(--green),
+    0 0 30px var(--green-dim),
+    0 0 60px rgba(0, 255, 65, 0.2);
+  animation: flicker 6s infinite;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  letter-spacing: 0.4em;
+  color: var(--green-dim);
+  margin-top: 4px;
+}
+
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96%            { opacity: 0.7; }
+  97%            { opacity: 1; }
+  98%            { opacity: 0.4; }
+  99%            { opacity: 1; }
+}
+
+/* ─── Stats bar ──────────────────────────────────────────────────────────── */
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 8px 16px;
+  border: 1px solid var(--green-dark);
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.stat { text-align: center; }
+
+.stat-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: var(--green-dim);
+}
+
+.stat-value {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green);
+}
+
+/* ─── Timer bar ──────────────────────────────────────────────────────────── */
+.timer-bar {
+  height: 3px;
+  background: var(--green-dark);
+  margin-bottom: 20px;
+}
+
+.timer-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  transition: width 1s linear, background 0.5s;
+}
+
+.timer-fill.warning {
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+}
+
+.timer-fill.danger {
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: pulse-red 0.5s ease infinite alternate;
+}
+
+@keyframes pulse-red {
+  from { opacity: 1; }
+  to   { opacity: 0.5; }
+}
+
+/* ─── Progress track ─────────────────────────────────────────────────────── */
+.track {
+  height: 6px;
+  background: var(--green-dark);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.track-fill {
+  height: 100%;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.track-car {
+  position: absolute;
+  top: -6px;
+  font-size: 16px;
+  transition: left 0.3s ease;
+  filter: drop-shadow(0 0 4px var(--green));
+}
+
+/* ─── Word display ───────────────────────────────────────────────────────── */
+.word-display {
+  background: rgba(0, 10, 2, 0.8);
+  border: 1px solid var(--green-dim);
+  padding: 24px;
+  margin-bottom: 4px;
+  min-height: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-content: flex-start;
+  box-shadow:
+    inset 0 0 20px rgba(0, 255, 65, 0.05),
+    0 0 20px rgba(0, 255, 65, 0.05);
+  position: relative;
+}
+
+.word-display::before {
+  content: 'CITATION //';
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--green-dim);
+  background: var(--bg);
+  padding: 0 6px;
+}
+
+/* ─── Words ──────────────────────────────────────────────────────────────── */
+.word {
+  font-size: 1.3rem;
+  letter-spacing: 0.05em;
+  padding: 2px 4px;
+  transition: color 0.1s;
+}
+
+.word.done    { color: var(--green-dark); }
+.word.pending { color: #1a5c2a; }
+.word.current { color: var(--green); }
+
+/* Character-level feedback */
+.word.current .char         { display: inline-block; }
+.word.current .char.correct { color: var(--green); text-shadow: 0 0 6px var(--green); }
+.word.current .char.wrong   { color: var(--red); text-shadow: 0 0 6px var(--red); background: rgba(255, 49, 49, 0.1); }
+.word.current .char.pending { color: #2a7a3a; }
+
+/* Blinking cursor on the next character to type */
+.word.current .char.cursor::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--green);
+  vertical-align: middle;
+  margin-left: 1px;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ─── Attribution ────────────────────────────────────────────────────────── */
+.attribution {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--green-dim);
+  text-align: right;
+  margin-bottom: 12px;
+  padding: 4px 6px 0;
+  min-height: 1.4em;
+  opacity: 0.8;
+  transition: opacity 0.4s;
+}
+
+.attribution .attr-author { color: var(--green); }
+
+/* ─── Input ──────────────────────────────────────────────────────────────── */
+.input-zone {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.input-zone::before {
+  content: '>';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--green);
+  font-size: 1.2rem;
+  z-index: 1;
+}
+
+#typeInput {
+  width: 100%;
+  background: rgba(0, 255, 65, 0.05);
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.1rem;
+  padding: 12px 14px 12px 30px;
+  outline: none;
+  caret-color: var(--green);
+  letter-spacing: 0.05em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#typeInput:focus {
+  border-color: var(--green);
+  box-shadow:
+    0 0 15px rgba(0, 255, 65, 0.2),
+    inset 0 0 10px rgba(0, 255, 65, 0.05);
+}
+
+#typeInput.error {
+  border-color: var(--red);
+  box-shadow: 0 0 15px rgba(255, 49, 49, 0.3);
+}
+
+/* ─── Overlays ───────────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  background: rgba(3, 13, 6, 0.92);
+  flex-direction: column;
+  gap: 20px;
+}
+
+.overlay.hidden { display: none; }
+
+.overlay-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2rem, 8vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--green);
+  text-shadow:
+    0 0 20px var(--green),
+    0 0 60px var(--green-dim);
+  animation: glitch 3s infinite;
+}
+
+.overlay-title.fail {
+  color: var(--red);
+  text-shadow: 0 0 20px var(--red);
+  animation: none;
+}
+
+@keyframes glitch {
+  0%, 90%, 100% {
+    transform: none;
+    text-shadow: 0 0 20px var(--green), 0 0 60px var(--green-dim);
+  }
+  91% { transform: translateX(-3px); text-shadow: -3px 0 var(--red), 3px 0 #00f; }
+  92% { transform: translateX( 3px); text-shadow:  3px 0 var(--red),-3px 0 #00f; }
+  93% { transform: none; }
+}
+
+.overlay-instructions {
+  text-align: center;
+  color: var(--green-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  line-height: 1.8;
+}
+
+.log {
+  font-size: 0.7rem;
+  color: var(--green-dim);
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+}
+
+/* ─── Result grid ────────────────────────────────────────────────────────── */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  text-align: center;
+  padding: 20px;
+  border: 1px solid var(--green-dark);
+  background: rgba(0, 255, 65, 0.02);
+}
+
+.result-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: var(--green-dim);
+  margin-bottom: 4px;
+}
+
+.result-value {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green);
+}
+
+/* ─── Difficulty selector ────────────────────────────────────────────────── */
+.difficulty {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.diff-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--green-dark);
+  color: var(--green-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.diff-btn.active {
+  border-color: var(--green-dim);
+  color: var(--green-dim);
+}
+
+.diff-btn:hover:not(.active) {
+  border-color: var(--green-dark);
+  color: var(--green-dim);
+  opacity: 0.6;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  padding: 10px 24px;
+  background: transparent;
+  border: 1px solid var(--green-dim);
+  color: var(--green-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn:hover {
+  background: rgba(0, 255, 65, 0.1);
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.btn.primary {
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+}
